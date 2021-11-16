@@ -17,7 +17,13 @@ First and foremost, this COVID dashboard will help to **track general infection
 ## Data Sources
 We choose four aspects of COVID-19 data, confirmed cases, hospitalization, death and vaccination mainly from [OpenDataPhilly](https://www.opendataphilly.org/dataset/covid-cases). Some data from [CDC](https://data.cdc.gov/browse) might also be considered. The data form that we will utilized in our project includes csv, geojson, shp and API.  We will also use the aggregated number by different groups of sex, race and age categories provided by all these datasets. Both real-time and historical data by ZIP is needed in our project. All the datasets are open-accessed to us. 
 
-**Test and cases:** -- [OpenDataPhilly](https://www.opendataphilly.org/dataset/covid-cases), updated "daily" at 4 pm every day (according to city [metadata](https://metadata.phila.gov/#home/datasetdetails/5ea725f6890f920015c17af8/representationdetails/5ea73b68890f920015c190d3/)). 
+**Test and cases:** -- [OpenDataPhilly](https://www.opendataphilly.org/dataset/covid-cases), updated "daily" at 4 pm every day (according to city [metadata](https://metadata.phila.gov/#home/datasetdetails/5ea725f6890f920015c17af8/representationdetails/5ea73b68890f920015c190d3/)). We choose the real-time cummulative test outcome data, historical test data and real-time test data by ZIP:
+
+  name  | field  | format
+  ------------- | ------------- | -------------
+ COVID Tests by Outcome   | covid_outcome, count, etl_timestamp | csv
+ COVID Tests by Date   | collection_date, test_result, count, etl_timestamp  | csv
+COVID Tests by ZIP    | covid_status, zip_code, count, etl_timestamp  | GeoJSON
 
 **Hospitalization:** -- [OpenDataPhilly](https://www.opendataphilly.org/dataset/covid-hospitalizations), updated "daily" at 4 pm every day (according to city [metadata](https://metadata.phila.gov/#home/datasetdetails/5efb5dc2bec0b10015172d9b/representationdetails/5efb6f4a2f3c4c00199b0c84/))
 
@@ -27,6 +33,7 @@ We choose four aspects of COVID-19 data, confirmed cases, hospitalization, death
 
 **COVID Cumulative Historical Snapshots:** -- [OpenDataPhilly](https://www.opendataphilly.org/dataset/covid-cumulative-historical-data), updated "daily" at 4 pm every day.
 
+**Total population by ZIP in Philadelphia:** -- BigQuery public datasets,updated with the national census, here we choose 2018 5-years ACS.
 
 
 ## Wireframes
