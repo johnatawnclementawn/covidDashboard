@@ -1,0 +1,615 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>COVID19_dashboard</title>
+
+  <!-- Leaflet stylesheet is below -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+   integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+   crossorigin=""/>
+  <!-- C3 stylesheet is below -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.css"
+   integrity="sha512-GQSxWe9Cj4o4EduO7zO9HjULmD4olIjiQqZ7VJuwBxZlkWaUFGCxRkn39jYnD2xZBtEilm0m4WBG7YEmQuMs5Q=="
+   crossorigin="anonymous" referrerpolicy="no-referrer" />
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+   <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
+
+
+
+  <!-- Stylesheet for the report's custom layout is below -->
+  <style>
+    body {
+      font-family: sans;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 10vh 1fr 1fr 1fr 1fr;
+      grid-template-areas:
+        "header header"
+        "text map"
+        "chart4 chart1"
+        "chart5 chart5"
+        "map2 map3";
+      column-gap: 1rem;
+      row-gap: 1rem;
+    }
+    h1 {
+      grid-area: header;
+      margin: 1rem;
+    }
+    #explanatoryText{
+      grid-area: text;
+      margin: 1rem;
+    }
+    #densitymapWrapper {
+      grid-area: map;
+        }
+    #densitymap {
+      height: 350px;
+    }
+    #casechart {
+      grid-area: chart1;
+      margin: 1rem;
+    }
+    #vaccchart {
+      grid-area: chart4;
+      margin: 1rem;
+    }
+    #hosp_vac_chart{
+      grid-area: chart5;
+      margin: 1rem;
+    }
+    #hosp_case_mapWrapper{
+      grid-area: map2;
+    }
+    #hosp_case_map{
+      height: 300px;
+      margin: 1rem;
+    }
+    #death_case_mapWrapper {
+      grid-area: map3;
+    }
+    #death_case_map
+    {
+      height: 300px;
+      margin: 1rem;
+    }
+    .legend {
+    padding: 6px 8px;
+    background: white;
+    background: rgba(255,255,255,0.8);
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    border: 1px solid black;
+    border-radius: 5px;
+  }
+  .legend ol {
+    list-style: none;
+    padding: 0;
+    display: flex;
+  }
+  .legend li {
+    display: flex;
+    gap: 0.25em;
+  }
+  .legend li:first-child {
+    flex-direction: row-reverse;
+  }
+  .key-color {
+    display: block;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  </style>
+</head>
+
+<body>
+  <h1>Visualization of COVID-19 in NYC</h1>
+
+  <!-- Explatory text goes in its own div -->
+  <div id="explanatoryText">
+    <nav>
+      <a href="cases.html">Cases</a>
+      <a href="hospital.html">Hospitalization</a>
+      <a href="deaths.html">Deaths</a>
+    </nav>
+
+    <p>This dashboard visualizes the basic situation of COVID-19 in epidemic curves, maps, tables and bar plots in terms of daily, last 14 or 28 days. The most severe pandemic regions were identified in tables and maps to help government understand the basic pandemic trend, know how to allocate medical resources and adjust the prevention strategies.</p>
+    <p>The hotspots of confirmed cases and hospitalization concentrated mainly in Staten Island and Queens. Counties with lower incidence rate are Bronx and Manhattan. </p>
+    <p>Under the positive tested condition, people are more likely to get hospitalized and dead in the east and south edge of Queen county and northern Manhattan.</p>
+    <p>Data source: NYC Open Data,  New York State Department of Health </p>
+    <style>
+      table,table tr th, table tr td { border:1px solid #247BA0; }
+      table { width: 600px; min-height: 75px; line-height: 25px; text-align: center; border-collapse: collapse;}
+    </style>
+    <table>
+      <tr>
+        <td></td>
+        <td>Daily Avg for Last 7Days</td>
+        <td>14-day Change</td>
+        <td>Total report cases</td>
+      </tr>
+      {% for row in new_report %}
+      <tr>
+        <td>{{ row.Type }}</td>
+        <td>{{ row.Count_7Day_Avg }}</td>
+        <td>{{ row.Change }}</td>
+        <td>{{ row.Count_Total }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+
+
+  </div>
+
+  <div id="densitymapWrapper">
+    <h3>Map of postive tested percentage over last 7 days </h3>
+    <div id="densitymap"></div>
+  </div>
+
+
+  <div id="casechart"></div>
+
+  <div id="vaccchart"></div>
+
+  <div id="hosp_vac_chart"></div>
+
+  <div id="hosp_case_mapWrapper">
+    <h3>Map of hospitalization/positive tested cases </h3>
+    <div id="hosp_case_map"></div>
+  </div>
+
+  <div id="death_case_mapWrapper">
+    <h3>Map of death/positive tested cases </h3>
+    <div id="death_case_map"></div>
+  </div>
+
+
+
+  <!-- Leaflet JavaScript library is below -->
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+   integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+   crossorigin=""></script>
+  <!-- D3 JavaScript library is below -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.16.0/d3.min.js"
+   integrity="sha512-FHsFVKQ/T1KWJDGSbrUhTJyS1ph3eRrxI228ND0EGaEp6v4a/vGwPWd3Dtd/+9cI7ccofZvl/wulICEurHN1pg=="
+   crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- C3 JavaScript library is below -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.js"
+   integrity="sha512-11Z4MD9csmC3vH8Vd0eIPJBQu3uEHEqeznWEt3sLBCdQx3zm9mJbBcJH8WTcyGY9EXDE81BNpjE2vLosPK8cFQ=="
+   crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <script>
+    /*
+
+        MAP OF POP. DENSITY ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    */
+    var initialCenter = [40.7128, -74.0060];  // <-- Latitude, Longitude
+    var initialZoom = 10;
+    var densitymap = L.map('densitymap', {
+      zoomSnap: 0,
+      zoomDelta: 0.25
+    }).setView(initialCenter, initialZoom);
+
+    var baseLayer = new L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner-background/{z}/{x}/{y}{r}.{ext}', {
+    	attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    	subdomains: 'abcd',
+    	minZoom: 0,
+    	maxZoom: 20,
+    	ext: 'png'
+    });
+    baseLayer.addTo(densitymap);
+
+    function getColor(d) {
+    return d > 7 ? '#800026' :
+           d > 6 ? '#BD0026' :
+           d > 5  ? '#E31A1C' :
+           d > 4  ? '#FC4E2A' :
+           d > 3   ? '#FD8D3C' :
+           d > 2  ? '#FEB24C' :
+           d > 1  ? '#FED976' :
+                      '#FFEDA0';
+    }
+
+    function getStyle(feature) {
+      var scaledValue = feature.properties['percentpositivity_7day'];
+      var featureColor = getColor(scaledValue);
+
+      return {
+        color: featureColor,
+        weight: 2,
+      opacity: 1,
+      dashArray: '3',
+      fillOpacity: 0.7
+      };
+    }
+
+    function getTooltip(layer) {
+      var density = layer.feature.properties['percentpositivity_7day'];
+      return density;
+    }
+
+    var densitymapdata = {{covid_map}};
+    var dataLayer = L.geoJSON(densitymapdata, {
+      style: getStyle
+    });
+    dataLayer.bindTooltip(getTooltip)
+    dataLayer.addTo(densitymap);
+
+    var overviewLegend = L.control({position: 'bottomright'});
+    overviewLegend.onAdd = function (map) {
+      var container = L.DomUtil.create('div', 'info legend');
+      container.innerHTML = `
+          <ol>
+            <li><span class="key-color" style="background: #FFEDA0;"></span><span class="key-label">Low</span></li>
+            <li><span class="key-color" style="background: #FED976;"></span></li>
+            <li><span class="key-color" style="background: #FEB24C;"></span></li>
+            <li><span class="key-color" style="background: #FD8D3C;"></span></li>
+            <li><span class="key-color" style="background: #FC4E2A;"></span></li>
+            <li><span class="key-color" style="background: #E31A1C;"></span></li>
+            <li><span class="key-color" style="background: #BD0026;"></span></li>
+            <li><span class="key-color" style="background: ##800026;"></span><span class="key-label">High</span></li>
+          </ol>
+          `;
+      return container;
+    };
+    overviewLegend.addTo(densitymap);
+
+    /*
+
+    Confirmed cases ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    */
+    var options = {
+        series: [{
+          name: 'case',
+          data: {{ daily_summary['CASE_COUNT']}}
+        }],
+        chart: {
+          type: 'area',
+          height: 300,
+          zoom: {
+            enabled: false
+        }
+      },
+      dataLabels: {
+        enabled: false
+      },
+      stroke: {
+        curve: 'smooth',
+        width: 2,
+      },
+      fill: {type: 'gradient',
+              gradient: {
+                opacityFrom: 0.6,
+                opacityTo: 0.8,
+              }
+            },
+      title: {
+        text: 'Daily confirmed cases',
+        align: 'left'
+      },
+      labels: {{ daily_summary['date_of_interest'] }},
+      xaxis: {
+        type: 'datetime',
+      },
+        colors: ['#E31A1C'],
+      yaxis: {
+        opposite: true
+      },
+      legend: {
+        horizontalAlign: 'left'
+      }
+    };
+
+    var casechart = new ApexCharts(document.querySelector("#casechart"), options);
+    casechart.render();
+
+
+    /*
+
+    Vaccinations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    */
+    var options = {
+      chart: {
+        height: 350,
+        width:500,
+        type: "line",
+        stacked: false
+      },
+      dataLabels: {
+        enabled: false
+      },
+      colors: ["#247BA0","#FF1654"],
+      series: [
+        {
+          name: "First Dose",
+          data: {{vac_accumulated_by_day['First_Dose']}}
+        },
+        {
+          name: "Series Complete",
+          data: {{vac_accumulated_by_day['Series_Complete']}}
+        }
+      ],
+      stroke: {
+        curve: 'smooth'
+      },
+      title: {
+        text: 'The vaccination of 1st and 2nd dose by time',
+        align: 'left'
+      },
+      plotOptions: {
+        bar: {
+          columnWidth: "20%"
+        }
+      },
+      labels: {{ vac_accumulated_by_day['date'] }},
+      xaxis: {
+        type: 'datetime',
+      },
+      yaxis: [
+        {
+          axisTicks: {
+            show: true
+          },
+          axisBorder: {
+            show: true,
+            color: "#247BA0"
+          },
+          labels: {
+            style: {
+              colors: "#247BA0"
+            }
+          },
+          title: {
+            text: "First Dose",
+            style: {
+              color: "#247BA0"
+            }
+          }
+        },
+        {
+          opposite: true,
+          axisTicks: {
+            show: true
+          },
+          axisBorder: {
+            show: true,
+            color: "#FF1654"
+          },
+          labels: {
+            style: {
+              colors: "#FF1654"
+            }
+          },
+          title: {
+            text: "Series Complete",
+            style: {
+              color: "#FF1654"
+            }
+          }
+        }
+      ],
+      tooltip: {
+        shared: false,
+        intersect: true,
+        x: {
+          show: false
+        }
+      },
+      legend: {
+        horizontalAlign: "left",
+        offsetX: 40
+      }
+
+    };
+
+    var vaccchart = new ApexCharts(document.querySelector("#vaccchart"), options);
+    vaccchart.render();
+
+    /*
+
+    comparison of the hosp under vac or unvac ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    */
+    var options = {
+        series: [{
+            name: 'hospital rate under vaccine',
+            data: {{ breakthrough['vax_hosp_rate_adj'] }}
+          },
+          {
+            name: 'hospital rate under unvaccine',
+            data: {{ breakthrough['unvax_hosp_rate_adj'] }}
+        }],
+        chart: {
+        type: 'bar',
+        height: 250
+        },
+        plotOptions: {
+          bar: {
+            horizontal: false,
+            columnWidth: '55%',
+            endingShape: 'rounded'
+          },
+        },
+        dataLabels: {
+          enabled: false
+        },
+        stroke: {
+          show: true,
+          width: 2,
+          colors: ['transparent']
+        },
+        title: {
+          text: 'hospitalization rate: vaccine vs. unvaccine',
+          align: 'left'
+        },
+        labels: {{breakthrough['Week_of_diagnosis']}},
+        xaxis: {
+          type: 'datetime',
+        },
+        yaxis: {
+          opposite: true
+        },
+        fill: {
+          opacity: 1
+        },
+    };
+
+    var hosp_vac_chart = new ApexCharts(document.querySelector("#hosp_vac_chart"), options);
+    hosp_vac_chart.render();
+
+    /*
+    hosp_case map of vaccinated case rate ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    */
+    var initialCenter2 = [40.7128, -74.0060];  // <-- Latitude, Longitude
+    var initialZoom2= 10;
+    var hosp_case_map = L.map('hosp_case_map', {
+      zoomSnap: 0,
+      zoomDelta: 0.25
+    }).setView(initialCenter2, initialZoom2);
+
+    var baseLayer2 = new L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner-background/{z}/{x}/{y}{r}.{ext}', {
+      attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      subdomains: 'abcd',
+      minZoom: 0,
+      maxZoom: 20,
+      ext: 'png'
+    });
+      baseLayer2.addTo(hosp_case_map);
+
+  function getColor2(d) {
+  return d > 0.3 ? '#800026' :
+         d > 0.24 ? '#BD0026' :
+         d > 0.17  ? '#E31A1C' :
+         d > 0.1  ? '#FC4E2A' :
+         d > 0.05   ? '#FD8D3C' :
+         d > 0.01  ? '#FEB24C' :
+         d > 0  ? '#FED976' :
+                  '#FFEDA0';
+  }
+
+  function getStyle2(feature) {
+    var scaledValue = feature.properties['hosp_case_ratio_avg'];
+    var featureColor = getColor2(scaledValue);
+
+    return {
+      color: featureColor,
+      weight: 2,
+    opacity: 1,
+    dashArray: '3',
+    fillOpacity: 0.7
+    };
+  }
+  function getTooltip2(layer) {
+    var hosp_case = layer.feature.properties['hosp_case_ratio_avg'];
+    return hosp_case;
+  }
+
+  var hosp_case_mapdata = {{covid_map}};
+  var dataLayer2 = L.geoJSON(hosp_case_mapdata, {
+    style: getStyle2
+  });
+  dataLayer2.bindTooltip(getTooltip2)
+  dataLayer2.addTo(hosp_case_map);
+
+  var overviewLegend2 = L.control({position: 'bottomright'});
+  overviewLegend2.onAdd = function (map) {
+    var container2 = L.DomUtil.create('div', 'info legend');
+    container2.innerHTML = `
+        <ol>
+          <li><span class="key-color" style="background: #FFEDA0;"></span><span class="key-label">Low</span></li>
+          <li><span class="key-color" style="background: #FED976;"></span></li>
+          <li><span class="key-color" style="background: #FEB24C;"></span></li>
+          <li><span class="key-color" style="background: #FD8D3C;"></span></li>
+          <li><span class="key-color" style="background: #FC4E2A;"></span></li>
+          <li><span class="key-color" style="background: #E31A1C;"></span></li>
+          <li><span class="key-color" style="background: #BD0026;"></span></li>
+          <li><span class="key-color" style="background: ##800026;"></span><span class="key-label">High</span></li>
+        </ol>
+        `;
+    return container2;
+  };
+  overviewLegend2.addTo(hosp_case_map);
+
+
+    /*
+    death_case map of vaccinated case rate ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    */
+    var initialCenter3 = [40.7128, -74.0060];  // <-- Latitude, Longitude
+    var initialZoom3= 10;
+    var death_case_map = L.map('death_case_map', {
+      zoomSnap: 0,
+      zoomDelta: 0.25
+    }).setView(initialCenter3, initialZoom3);
+
+    var baseLayer3 = new L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner-background/{z}/{x}/{y}{r}.{ext}', {
+      attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      subdomains: 'abcd',
+      minZoom: 0,
+      maxZoom: 20,
+      ext: 'png'
+    });
+    baseLayer3.addTo(death_case_map);
+
+    function getColor3(d) {
+    return d > 0.06 ? '#800026' :
+           d > 0.05 ? '#BD0026' :
+           d > 0.04  ? '#E31A1C' :
+           d > 0.03  ? '#FC4E2A' :
+           d > 0.02   ? '#FD8D3C' :
+           d > 0.01  ? '#FEB24C' :
+           d > 0  ? '#FED976' :
+                    '#FFEDA0';
+    }
+
+    function getStyle3(feature) {
+      var scaledValue = feature.properties['death_case_ratio_1day'];
+      var featureColor = getColor3(scaledValue);
+
+      return {
+        color: featureColor,
+        weight: 2,
+      opacity: 1,
+      dashArray: '3',
+      fillOpacity: 0.7
+      };
+    }
+
+    function getTooltip3(layer) {
+      var death_case = layer.feature.properties['death_case_ratio_1day'];
+      return death_case;
+    }
+
+    var death_case_mapdata = {{covid_map}};
+    var dataLayer3 = L.geoJSON(death_case_mapdata, {
+      style: getStyle3
+    });
+    dataLayer3.bindTooltip(getTooltip3)
+    dataLayer3.addTo(death_case_map);
+
+    var overviewLegend3 = L.control({position: 'bottomright'});
+    overviewLegend3.onAdd = function (map) {
+      var container3 = L.DomUtil.create('div', 'info legend');
+      container3.innerHTML = `
+          <ol>
+            <li><span class="key-color" style="background: #FFEDA0;"></span><span class="key-label">Low</span></li>
+            <li><span class="key-color" style="background: #FED976;"></span></li>
+            <li><span class="key-color" style="background: #FEB24C;"></span></li>
+            <li><span class="key-color" style="background: #FD8D3C;"></span></li>
+            <li><span class="key-color" style="background: #FC4E2A;"></span></li>
+            <li><span class="key-color" style="background: #E31A1C;"></span></li>
+            <li><span class="key-color" style="background: #BD0026;"></span></li>
+            <li><span class="key-color" style="background: ##800026;"></span><span class="key-label">High</span></li>
+          </ol>
+          `;
+      return container3;
+    };
+    overviewLegend3.addTo(death_case_map);
+
+  </script>
+</body>
+</html>
