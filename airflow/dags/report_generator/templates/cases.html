@@ -1,0 +1,305 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>covidCases</title>
+
+  <!-- Leaflet stylesheet is below -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+   integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+   crossorigin=""/>
+  <!-- C3 stylesheet is below -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.css"
+   integrity="sha512-GQSxWe9Cj4o4EduO7zO9HjULmD4olIjiQqZ7VJuwBxZlkWaUFGCxRkn39jYnD2xZBtEilm0m4WBG7YEmQuMs5Q=="
+   crossorigin="anonymous" referrerpolicy="no-referrer" />
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+
+
+  <!-- Stylesheet for the report's custom layout is below -->
+  <style>
+    body {
+      font-family: sans;
+      display: grid;
+      grid-template-columns: 50vw 50vw;
+      grid-template-rows: 10vh 35vh auto auto;
+      grid-template-areas:
+        "header header"
+        "map2 map2"
+        "table1 chart2"
+        "chart6 chart6";
+      column-gap: 1rem;
+      row-gap: 1rem;
+    }
+    h1 {
+      grid-area: header;
+    }
+    #densitymap {
+      grid-area: map2;
+    }
+    #casechart {
+      grid-area: chart2;
+    }
+    #agechart{
+      grid-area: chart6;
+    }
+    #summarytable {
+      grid-area: table1;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Visualization of COVID-19 Cases in NYC</h1>
+
+  <!-- Table 1 goes in its own div -->
+  <div id="summarytable">
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="hospital.html">Hospitalization</a>
+      <a href="deaths.html">Deaths</a>
+    </nav>
+
+    <style>
+      table,table tr th, table tr td { border:1px solid #247BA0; }
+      table { min-width: 500px; min-height: 300px; line-height: 25px; text-align: center; border-collapse: collapse;}
+    </style>
+    <table>
+      <tr>
+        <td>Rank</td>
+        <td>Region</td>
+        <td>14-day Positive rate</td>
+      </tr>
+      {% for current_test in top_test %}
+      <tr>
+        <td>{{ current_test.Rank }}</td>
+        <td>{{ current_test.neighborhood_name }}</td>
+        <td>{{ current_test.percent_positivity_7day }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div id="casechart"></div>
+
+  <div id="densitymap"></div>
+
+  <div id="agechart"></div>
+
+  <!-- Leaflet JavaScript library is below -->
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+   integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+   crossorigin=""></script>
+  <!-- D3 JavaScript library is below -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.16.0/d3.min.js"
+   integrity="sha512-FHsFVKQ/T1KWJDGSbrUhTJyS1ph3eRrxI228ND0EGaEp6v4a/vGwPWd3Dtd/+9cI7ccofZvl/wulICEurHN1pg=="
+   crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- C3 JavaScript library is below -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.js"
+   integrity="sha512-11Z4MD9csmC3vH8Vd0eIPJBQu3uEHEqeznWEt3sLBCdQx3zm9mJbBcJH8WTcyGY9EXDE81BNpjE2vLosPK8cFQ=="
+   crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <script>
+
+
+    /*
+
+    hosp ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    */
+
+    var options = {
+      series: [{
+        name: 'hospital',
+        data: {{ daily_summary['HOSPITALIZED_COUNT']}}
+      }],
+      chart: {
+        type: 'area',
+        height: 300,
+        zoom: {
+          enabled: false
+        }
+      },
+      dataLabels: {
+        enabled: false
+      },
+      stroke: {
+        curve: 'smooth',
+                width: 2,
+      },
+
+      title: {
+        text: 'time curve of daily hospitalization',
+        align: 'left'
+      },
+      labels: {{ daily_summary['date_of_interest'] }},
+      xaxis: {
+        type: 'datetime',
+      },
+      yaxis: {
+        opposite: true
+      },
+      legend: {
+        horizontalAlign: 'left'
+      }
+    };
+
+    var casechart = new ApexCharts(document.querySelector("#casechart"), options);
+    casechart.render();
+
+
+    /*
+
+        MAP OF POP. DENSITY ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    */
+    var initialCenter = [40.7128, -74.0060];  // <-- Latitude, Longitude
+    var initialZoom = 10;
+    var densitymap = L.map('densitymap', {
+      zoomSnap: 0,
+      zoomDelta: 0.25
+    }).setView(initialCenter, initialZoom);
+
+    var baseLayer = new L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner-background/{z}/{x}/{y}{r}.{ext}', {
+    	attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    	subdomains: 'abcd',
+    	minZoom: 0,
+    	maxZoom: 20,
+    	ext: 'png'
+    });
+    baseLayer.addTo(densitymap);
+
+    function getColor(d) {
+    return d > 7 ? '#800026' :
+           d > 6 ? '#BD0026' :
+           d > 5  ? '#E31A1C' :
+           d > 4  ? '#FC4E2A' :
+           d > 3   ? '#FD8D3C' :
+           d > 2  ? '#FEB24C' :
+           d > 1  ? '#FED976' :
+                      '#FFEDA0';
+    }
+
+    function getStyle(feature) {
+      var scaledValue = feature.properties['percentpositivity_7day'];
+      var featureColor = getColor(scaledValue);
+
+      return {
+        color: featureColor,
+        weight: 2,
+      opacity: 1,
+      dashArray: '3',
+      fillOpacity: 0.7
+      };
+    }
+
+    function getTooltip(layer) {
+      var density = layer.feature.properties['percentpositivity_7day'];
+      return density;
+    }
+
+    var densitymapdata = {{covid_map}};
+    var dataLayer = L.geoJSON(densitymapdata, {
+      style: getStyle
+    });
+    dataLayer.bindTooltip(getTooltip)
+    dataLayer.addTo(densitymap);
+
+    var overviewLegend = L.control({position: 'bottomright'});
+    overviewLegend.onAdd = function (map) {
+      var container = L.DomUtil.create('div', 'info legend');
+      container.innerHTML = `
+          <ol>
+            <li><span class="key-color" style="background: #FFEDA0;"></span><span class="key-label">Low</span></li>
+            <li><span class="key-color" style="background: #FED976;"></span></li>
+            <li><span class="key-color" style="background: #FEB24C;"></span></li>
+            <li><span class="key-color" style="background: #FD8D3C;"></span></li>
+            <li><span class="key-color" style="background: #FC4E2A;"></span></li>
+            <li><span class="key-color" style="background: #E31A1C;"></span></li>
+            <li><span class="key-color" style="background: #BD0026;"></span></li>
+            <li><span class="key-color" style="background: ##800026;"></span><span class="key-label">High</span></li>
+          </ol>
+          `;
+      return container;
+    };
+    overviewLegend.addTo(densitymap);
+
+    /*
+
+    COVID Cases by Age ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    */
+
+    var agechartoptions = {
+      series: [
+        {
+          name: '0 to 4',
+          data: {{ wk_all['case_age_0_4'] }}
+        },
+        {
+          name: '5 to 12',
+          data: {{ wk_all['case_age_5_12'] }}
+        },
+        {
+          name: '13 to 17',
+          data: {{ wk_all['case_age_13_17'] }}
+        },
+        {
+          name: '18 to 24',
+          data: {{ wk_all['case_age_18_24'] }}
+        },
+        {
+          name: '25 to 34',
+          data: {{ wk_all['case_age_25_34'] }}
+        },
+        {
+          name: '35 to 44',
+          data: {{ wk_all['case_age_35_44'] }}
+        },
+        {
+          name: '45 to 54',
+          data: {{ wk_all['case_age_45_54'] }}
+        },
+        {
+          name: '55 to 64',
+          data: {{ wk_all['case_age_55_64'] }}
+        },
+        {
+          name: '65 to 74',
+          data: {{ wk_all['case_age_65_74'] }}
+        },
+        {
+          name: '75 and up',
+          data: {{ wk_all['case_age_75up'] }}
+        }
+      ],
+      chart: {
+        type: 'bar',
+        height: 350
+        },
+      plotOptions: {
+        bar: {
+          horizontal: false,
+          columnWidth: '55%',
+          endingShape: 'rounded'
+        },
+      },
+      dataLabels: {
+        enabled: false
+      },
+      stroke: {
+        show: true,
+        width: 2,
+        colors: ['transparent']
+      },
+      title: {
+        text: 'Positivity by Age',
+        align: 'left'
+      },
+    };
+
+    var agechart = new ApexCharts(document.querySelector("#agechart"), agechartoptions);
+    agechart.render();
+
+  </script>
+</body>
+</html>

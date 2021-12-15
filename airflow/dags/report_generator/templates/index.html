@@ -1,7 +1,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Visualization of COVID-19 in NYC</title>
+  <title>COVID19_dashboard</title>
 
   <!-- Leaflet stylesheet is below -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
@@ -23,55 +23,57 @@
       font-family: sans;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      grid-template-rows: 35vh 1fr 35vh 1fr 1fr 1fr 1fr 1fr;
+      grid-template-rows: 10vh 1fr 1fr 1fr 1fr;
       grid-template-areas:
         "header header"
-        "map map"
-        "list chart1"
-        "chart2 chart3"
-        "chart4 chart5"
-        "chart6 chart6"
-        "map2 map2"
-        "map3 map3";
+        "text map"
+        "chart4 chart1"
+        "chart5 chart5"
+        "map2 map3";
       column-gap: 1rem;
       row-gap: 1rem;
     }
     h1 {
       grid-area: header;
+      margin: 1rem;
     }
-    #densitymap {
+    #explanatoryText{
+      grid-area: text;
+      margin: 1rem;
+    }
+    #densitymapWrapper {
       grid-area: map;
-    height: 300px;
-    }
-    #densitylist {
-      grid-area: list;
+        }
+    #densitymap {
+      height: 350px;
     }
     #casechart {
       grid-area: chart1;
-    }
-    #deathchart {
-      grid-area: chart2;
-    }
-    #hospchart {
-      grid-area: chart3;
+      margin: 1rem;
     }
     #vaccchart {
       grid-area: chart4;
+      margin: 1rem;
     }
     #hosp_vac_chart{
       grid-area: chart5;
+      margin: 1rem;
     }
-    #agechart{
-      grid-area: chart6;
-    }
-    #hosp_case_map {
+    #hosp_case_mapWrapper{
       grid-area: map2;
-    height: 300px;
     }
-    #death_case_map {
+    #hosp_case_map{
+      height: 300px;
+      margin: 1rem;
+    }
+    #death_case_mapWrapper {
       grid-area: map3;
-    height: 300px;
-    }  
+    }
+    #death_case_map
+    {
+      height: 300px;
+      margin: 1rem;
+    }
     .legend {
     padding: 6px 8px;
     background: white;
@@ -103,26 +105,23 @@
 
 <body>
   <h1>Visualization of COVID-19 in NYC</h1>
-  <div id="densitylist"></div>
-<p>This dashboard visualizes the basic situation of COVID-19 in epidemic curves, maps, tables and bar plots in terms of daily, last 14 or 28 days. The most severe pandemic regions were identified in tables and maps to help government understand the basic pandemic trend, know how to allocate medical resources and adjust the prevention strategies.</p>
-<p>The hotspots of confirmed cases and hospitalization concentrated mainly in Staten Island and Queens. Counties with lower incidence rate are Bronx and Manhattan. </p>
-<p>Data source: NYC Open Data,  New York State Department of Health </p>
-  <div id="densitymap"></div>
-  <table>
-      <tr>
-        <td>Rank</td>
-        <td>Region</td>
-        <td>14-day Positive rate</td>
-      </tr>
-      {% for current_test in top_test %}
-      <tr>
-        <td>{{ current_test.Rank }}</td>
-        <td>{{ current_test.neighborhood_name }}</td>
-        <td>{{ current_test.percent_positivity_7day }}</td>
-      </tr>
-      {% endfor %}
-    </table>
 
+  <!-- Explatory text goes in its own div -->
+  <div id="explanatoryText">
+    <nav>
+      <a href="cases.html">Cases</a>
+      <a href="hospital.html">Hospitalization</a>
+      <a href="deaths.html">Deaths</a>
+    </nav>
+
+    <p>This dashboard visualizes the basic situation of COVID-19 in epidemic curves, maps, tables and bar plots in terms of daily, last 14 or 28 days. The most severe pandemic regions were identified in tables and maps to help government understand the basic pandemic trend, know how to allocate medical resources and adjust the prevention strategies.</p>
+    <p>The hotspots of confirmed cases and hospitalization concentrated mainly in Staten Island and Queens. Counties with lower incidence rate are Bronx and Manhattan. </p>
+    <p>Under the positive tested condition, people are more likely to get hospitalized and dead in the east and south edge of Queen county and northern Manhattan.</p>
+    <p>Data source: NYC Open Data,  New York State Department of Health </p>
+    <style>
+      table,table tr th, table tr td { border:1px solid #247BA0; }
+      table { width: 600px; min-height: 75px; line-height: 25px; text-align: center; border-collapse: collapse;}
+    </style>
     <table>
       <tr>
         <td></td>
@@ -141,21 +140,30 @@
     </table>
 
 
+  </div>
+
+  <div id="densitymapWrapper">
+    <h3>Map of postive tested percentage over last 7 days </h3>
+    <div id="densitymap"></div>
+  </div>
+
+
   <div id="casechart"></div>
-
-  <div id="deathchart"></div>
-
-  <div id="hospchart"></div>
 
   <div id="vaccchart"></div>
 
   <div id="hosp_vac_chart"></div>
 
-  <div id="agechart"></div>
+  <div id="hosp_case_mapWrapper">
+    <h3>Map of hospitalization/positive tested cases </h3>
+    <div id="hosp_case_map"></div>
+  </div>
 
-  <div id="hosp_case_map"></div>
+  <div id="death_case_mapWrapper">
+    <h3>Map of death/positive tested cases </h3>
+    <div id="death_case_map"></div>
+  </div>
 
-  <div id="death_case_map"></div>
 
 
   <!-- Leaflet JavaScript library is below -->
@@ -280,7 +288,7 @@
               }
             },
       title: {
-        text: 'time curve of daily confirmed cases',
+        text: 'Daily confirmed cases',
         align: 'left'
       },
       labels: {{ daily_summary['date_of_interest'] }},
@@ -299,94 +307,6 @@
     var casechart = new ApexCharts(document.querySelector("#casechart"), options);
     casechart.render();
 
-    /*
-
-    deaths ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    */
-    var options = {
-        series: [{
-          name: 'death',
-          data: {{ daily_summary['DEATH_COUNT']}}
-        }],
-        chart: {
-          type: 'area',
-          height: 300,
-          width:400,
-          zoom: {
-            enabled: false
-        }
-      },
-      dataLabels: {
-        enabled: false
-      },
-      stroke: {curve: 'smooth',
-                width: 2,
-      },
-      title: {
-        text: 'time curve of daily death',
-        align: 'left'
-      },
-      labels: {{ daily_summary['date_of_interest'] }},
-      xaxis: {
-        type: 'datetime',
-      },
-      yaxis: {
-        opposite: true
-      },
-      legend: {
-        horizontalAlign: 'left'
-      }
-    };
-
-    var deathchart = new ApexCharts(document.querySelector("#deathchart"), options);
-    deathchart.render();
-
-    /*
-
-    hosp ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    */
-
-    var options = {
-      series: [{
-        name: 'hospital',
-        data: {{ daily_summary['HOSPITALIZED_COUNT']}}
-      }],
-      chart: {
-        type: 'area',
-        height: 300,
-        width:400,
-        zoom: {
-          enabled: false
-        }
-      },
-      dataLabels: {
-        enabled: false
-      },
-      stroke: {
-        curve: 'smooth',
-                width: 2,
-      },
-
-      title: {
-        text: 'time curve of daily hospitalization',
-        align: 'left'
-      },
-      labels: {{ daily_summary['date_of_interest'] }},
-      xaxis: {
-        type: 'datetime',
-      },
-      yaxis: {
-        opposite: true
-      },
-      legend: {
-        horizontalAlign: 'left'
-      }
-    };
-
-    var hospchart = new ApexCharts(document.querySelector("#hospchart"), options);
-    hospchart.render();
 
     /*
 
@@ -416,6 +336,10 @@
       ],
       stroke: {
         curve: 'smooth'
+      },
+      title: {
+        text: 'The vaccination of 1st and 2nd dose by time',
+        align: 'left'
       },
       plotOptions: {
         bar: {
@@ -502,7 +426,7 @@
         }],
         chart: {
         type: 'bar',
-        height: 350
+        height: 250
         },
         plotOptions: {
           bar: {
@@ -539,117 +463,23 @@
     hosp_vac_chart.render();
 
     /*
-
-    COVID Cases by Age ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    */
-    
-    /*
-    var agechartoptions = {
-      series: [
-        {
-          name: '0 to 4',
-          data: {{ wk_all['case_age_0_4'] }}
-        },
-        {
-          name: '5 to 12',
-          data: {{ wk_all['case_age_5_12'] }}
-        },
-        {
-          name: '13 to 17',
-          data: {{ wk_all['case_age_13_17'] }}
-        },
-        {
-          name: '18 to 24',
-          data: {{ wk_all['case_age_18_24'] }}
-        },
-        {
-          name: '25 to 34',
-          data: {{ wk_all['case_age_25_34'] }}
-        },
-        {
-          name: '35 to 44',
-          data: {{ wk_all['case_age_35_44'] }}
-        },
-        {
-          name: '45 to 54',
-          data: {{ wk_all['case_age_45_54'] }}
-        },
-        {
-          name: '55 to 64',
-          data: {{ wk_all['case_age_55_64'] }}
-        },
-        {
-          name: '65 to 74',
-          data: {{ wk_all['case_age_65_74'] }}
-        },
-        {
-          name: '75 and up',
-          data: {{ wk_all['case_age_75up'] }}
-        }
-      ],
-      chart: {
-        type: 'bar',
-        height: 350
-        },
-      plotOptions: {
-        bar: {
-          horizontal: false,
-          columnWidth: '55%',
-          endingShape: 'rounded'
-        },
-      },
-      dataLabels: {
-        enabled: false
-      },
-      stroke: {
-        show: true,
-        width: 2,
-        colors: ['transparent']
-      },
-      title: {
-        text: 'Positivity by Age',
-        align: 'left'
-      },
-      labels: {{wk_all['Week_of_ending']}},
-      xaxis: {
-        type: 'datetime',
-      },
-      yaxis: {
-        opposite: true
-      },
-      fill: {
-        opacity: 1
-      },
-    };
-
-    var agechart = new ApexCharts(document.querySelector("#agechart"), agechartoptions);
-    agechart.render();
-  */
-
-
-
-    /*
-
     hosp_case map of vaccinated case rate ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
     */
-  var initialCenter2 = [40.7128, -74.0060];  // <-- Latitude, Longitude
-  var initialZoom2= 10;
-  var hosp_case_map = L.map('hosp_case_map', {
-    zoomSnap: 0,
-    zoomDelta: 0.25
-  }).setView(initialCenter2, initialZoom2);
+    var initialCenter2 = [40.7128, -74.0060];  // <-- Latitude, Longitude
+    var initialZoom2= 10;
+    var hosp_case_map = L.map('hosp_case_map', {
+      zoomSnap: 0,
+      zoomDelta: 0.25
+    }).setView(initialCenter2, initialZoom2);
 
-  var baseLayer2 = new L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner-background/{z}/{x}/{y}{r}.{ext}', {
-    attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    subdomains: 'abcd',
-    minZoom: 0,
-    maxZoom: 20,
-    ext: 'png'
-  });
-
-  baseLayer2.addTo(hosp_case_map);
+    var baseLayer2 = new L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner-background/{z}/{x}/{y}{r}.{ext}', {
+      attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      subdomains: 'abcd',
+      minZoom: 0,
+      maxZoom: 20,
+      ext: 'png'
+    });
+      baseLayer2.addTo(hosp_case_map);
 
   function getColor2(d) {
   return d > 0.3 ? '#800026' :
@@ -674,7 +504,6 @@
     fillOpacity: 0.7
     };
   }
-
   function getTooltip2(layer) {
     var hosp_case = layer.feature.properties['hosp_case_ratio_avg'];
     return hosp_case;
@@ -708,9 +537,7 @@
 
 
     /*
-
     death_case map of vaccinated case rate ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
     */
     var initialCenter3 = [40.7128, -74.0060];  // <-- Latitude, Longitude
     var initialZoom3= 10;
@@ -718,7 +545,7 @@
       zoomSnap: 0,
       zoomDelta: 0.25
     }).setView(initialCenter3, initialZoom3);
-  
+
     var baseLayer3 = new L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner-background/{z}/{x}/{y}{r}.{ext}', {
       attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       subdomains: 'abcd',
@@ -727,7 +554,7 @@
       ext: 'png'
     });
     baseLayer3.addTo(death_case_map);
-  
+
     function getColor3(d) {
     return d > 0.06 ? '#800026' :
            d > 0.05 ? '#BD0026' :
@@ -738,11 +565,11 @@
            d > 0  ? '#FED976' :
                     '#FFEDA0';
     }
-  
+
     function getStyle3(feature) {
       var scaledValue = feature.properties['death_case_ratio_1day'];
       var featureColor = getColor3(scaledValue);
-  
+
       return {
         color: featureColor,
         weight: 2,
@@ -751,19 +578,19 @@
       fillOpacity: 0.7
       };
     }
-  
+
     function getTooltip3(layer) {
       var death_case = layer.feature.properties['death_case_ratio_1day'];
       return death_case;
     }
-  
+
     var death_case_mapdata = {{covid_map}};
     var dataLayer3 = L.geoJSON(death_case_mapdata, {
       style: getStyle3
     });
     dataLayer3.bindTooltip(getTooltip3)
     dataLayer3.addTo(death_case_map);
-  
+
     var overviewLegend3 = L.control({position: 'bottomright'});
     overviewLegend3.onAdd = function (map) {
       var container3 = L.DomUtil.create('div', 'info legend');
